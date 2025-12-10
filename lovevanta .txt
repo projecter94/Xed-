@@ -1,0 +1,2862 @@
+-- !!! IMPORTANT: SET THE OWNER USERNAME HERE !!!
+local OWNER_NAME = "E6CUz"
+local ORIGINAL_OWNER_NAME = OWNER_NAME -- Backup for r! command assurance
+------------------------------------------------
+
+-- Services
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+-- Player References
+local LocalPlayer = Players.LocalPlayer
+local OwnerUsername = OWNER_NAME
+local OwnerChatConnections = {}
+
+-- ==================== VANTA V0.2 LOADING SCREEN ====================
+-- Advanced UI with animations
+
+task.spawn(function()
+    local LoadingGui = Instance.new("ScreenGui")
+    LoadingGui.Name = "VantaLoading"
+    LoadingGui.IgnoreGuiInset = true
+    LoadingGui.DisplayOrder = 9999
+    
+    -- Try to parent to CoreGui for overlay, fallback to PlayerGui
+    pcall(function()
+        LoadingGui.Parent = CoreGui
+    end)
+    if not LoadingGui.Parent then
+        LoadingGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    -- Main Background
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(1, 0, 1, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    MainFrame.BackgroundTransparency = 0
+    MainFrame.Parent = LoadingGui
+
+    -- Center Container
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(0, 400, 0, 250)
+    Container.AnchorPoint = Vector2.new(0.5, 0.5)
+    Container.Position = UDim2.new(0.5, 0, 0.5, 0)
+    Container.BackgroundTransparency = 1
+    Container.Parent = MainFrame
+
+    -- Title "VANTA"
+    local Title = Instance.new("TextLabel")
+    Title.Text = "VANTA"
+    Title.Size = UDim2.new(1, 0, 0, 60)
+    Title.Position = UDim2.new(0, 0, 0.2, 0)
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBlack
+    Title.TextSize = 60
+    Title.TextTransparency = 1 -- Start invisible
+    Title.Parent = Container
+
+    -- Version "V0.2"
+    local Version = Instance.new("TextLabel")
+    Version.Text = "V0.2"
+    Version.Size = UDim2.new(1, 0, 0, 30)
+    Version.Position = UDim2.new(0, 0, 0.45, 0)
+    Version.BackgroundTransparency = 1
+    Version.TextColor3 = Color3.fromRGB(150, 150, 150)
+    Version.Font = Enum.Font.GothamMedium
+    Version.TextSize = 20
+    Version.TextTransparency = 1 -- Start invisible
+    Version.Parent = Container
+
+    -- Loading Bar Container
+    local BarBG = Instance.new("Frame")
+    BarBG.Size = UDim2.new(0.8, 0, 0, 4)
+    BarBG.Position = UDim2.new(0.1, 0, 0.7, 0)
+    BarBG.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    BarBG.BorderSizePixel = 0
+    BarBG.BackgroundTransparency = 1 -- Start invisible
+    BarBG.Parent = Container
+
+    local BarFill = Instance.new("Frame")
+    BarFill.Size = UDim2.new(0, 0, 1, 0)
+    BarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarFill.BorderSizePixel = 0
+    BarFill.Parent = BarBG
+
+    -- Glow Effect
+    local Glow = Instance.new("ImageLabel")
+    Glow.Image = "rbxassetid://131275330756306" -- Soft glow gradient
+    Glow.Size = UDim2.new(1.5, 0, 1.5, 0)
+    Glow.Position = UDim2.new(-0.25, 0, -0.25, 0)
+    Glow.BackgroundTransparency = 1
+    Glow.ImageColor3 = Color3.fromRGB(20, 20, 20)
+    Glow.ImageTransparency = 1
+    Glow.Parent = Container
+    Glow.ZIndex = 0
+
+    -- Animation Logic
+    local function animate()
+        -- 1. Fade In Title
+        TweenService:Create(Title, TweenInfo.new(1), {TextTransparency = 0}):Play()
+        task.wait(0.5)
+        TweenService:Create(Version, TweenInfo.new(1), {TextTransparency = 0}):Play()
+        task.wait(0.5)
+        
+        -- 2. Show Bar
+        TweenService:Create(BarBG, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+        task.wait(0.2)
+        
+        -- 3. Load Bar
+        TweenService:Create(BarFill, TweenInfo.new(2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+        
+        -- Simulate loading steps
+        task.wait(2.2)
+        
+        -- 4. Fade Out All
+        local fadeInfo = TweenInfo.new(0.8)
+        TweenService:Create(MainFrame, fadeInfo, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(Title, fadeInfo, {TextTransparency = 1}):Play()
+        TweenService:Create(Version, fadeInfo, {TextTransparency = 1}):Play()
+        TweenService:Create(BarBG, fadeInfo, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(BarFill, fadeInfo, {BackgroundTransparency = 1}):Play()
+        
+        task.wait(0.8)
+        LoadingGui:Destroy()
+    end
+
+    animate()
+end)
+
+-- Wait slightly for UI to initialize visually before logic runs hard
+task.wait(0.5)
+
+-- ==================== SAFETY CHECKS ====================
+
+-- Check if owner exists in server immediately
+local function CheckOwnerPresence()
+    local owner = Players:FindFirstChild(OWNER_NAME)
+    if not owner then
+        warn("Script Aborted: Owner '" .. OWNER_NAME .. "' not found in the server.")
+        return false
+    end
+    return true
+end
+
+-- Stop script if owner isn't here
+if not CheckOwnerPresence() then
+    return 
+end
+
+-- Owner Join/Leave Monitors
+Players.PlayerAdded:Connect(function(plr)
+    if plr.Name == OWNER_NAME then
+        print(">> OWNER JOINED: " .. OWNER_NAME .. " <<")
+        StarterGui:SetCore("SendNotification", {
+            Title = "Stand Alert",
+            Text = "Owner " .. OWNER_NAME .. " has JOINED.",
+            Duration = 5
+        })
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if plr.Name == OWNER_NAME then
+        print(">> OWNER LEFT: " .. OWNER_NAME .. " <<")
+        StarterGui:SetCore("SendNotification", {
+            Title = "Stand Alert",
+            Text = "Owner " .. OWNER_NAME .. " has LEFT.",
+            Duration = 5
+        })
+    end
+end)
+
+-- ==================== CONFIGURATION ====================
+
+-- Stand Logic Configuration
+local Stand = {
+    IsActive = false,
+    IsTargeting = false,
+    OwnerPlayer = nil,
+    FollowTarget = nil, -- Added for fr! command functionality
+    FollowConnection = nil,
+    TargetConnection = nil,
+    TargetPlayer = nil,
+    Offset = Vector3.new(-3, 4, 4) -- Offset relative to owner (Left, Up, Back)
+}
+
+-- Weapon Auto-Buy Configuration Data
+local WeaponConfig = {
+    rifle = {
+        toolName = "[Rifle]",
+        shopName = "[Rifle] - $1694",
+        ammoShopName = "5 [Rifle Ammo] - $273"
+    },
+    flintlock = {
+        toolName = "[Flintlock]",
+        shopName = "[Flintlock] - $1421",
+        ammoShopName = "6 [Flintlock Ammo] - $163"
+    }
+}
+
+-- Auto-Buy System Flags
+local AutoBuy = {
+    isBuying = false,
+    isEquipping = false
+}
+
+-- Combat System Global Variables
+local CombatTarget = nil
+local isShooting = false
+local isIdle = true
+local isBuying = false
+local isBuyingGun = false
+local isGrabMode = false
+local isKnockMode = false
+local isStompMode = false
+local isLoopMode = false
+local isVoidSpam = false -- Added for Void Spam functionality
+local IsTeleporting = false -- Added for tp! command to bypass Anti-Sit checks
+local isUndergroundAttack = false -- Added for a! command
+
+-- AutoSave Variables
+local AutoSaveEnabled = false
+local isSavingOwner = false
+
+-- Connection Storage
+local FadeConnection = nil
+local grabbingConnection = nil
+local UndergroundConnection = nil
+
+-- Script Control Flag (Global Killswitch)
+local ScriptRunning = true
+
+-- ==================== PROTECTION SYSTEM VARIABLES ====================
+
+-- Protection Lists and Health Memory
+getgenv().sentryprotected = getgenv().sentryprotected or {}
+getgenv().lastHealths = getgenv().lastHealths or {}
+
+-- ==================== CRITICAL HELPER FUNCTIONS ====================
+
+-- Improved KO Detection Function (Fixed Logic for BodyEffects)
+-- Now explicitly checks the boolean values for K.O
+local function IsTargetKO(char)
+    if not char then return false end
+    
+    local be = char:FindFirstChild("BodyEffects")
+    
+    -- Check 1: BodyEffects "K.O" (Correct Boolean Check)
+    if be then
+        local koVal = be:FindFirstChild("K.O")
+        if koVal and koVal.Value == true then 
+            return true 
+        end
+    end
+    
+    -- Check 2: Health Threshold (Fallback)
+    local hum = char:FindFirstChild("Humanoid")
+    if hum and hum.Health < 4 and hum.Health > 0 then 
+        return true 
+    end
+    
+    -- Check 3: Check for Grabbing Constraint
+    if char:FindFirstChild("GRABBING_CONSTRAINT") then
+        return true
+    end
+
+    return false
+end
+
+-- New Function to check if Target is fully STOMPED/DEAD
+-- This prevents the loop from stomping a dead body
+local function IsTargetDead(char)
+    if not char then return true end
+    
+    local hum = char:FindFirstChild("Humanoid")
+    local be = char:FindFirstChild("BodyEffects")
+    
+    -- Check 1: Health (Standard)
+    if hum and hum.Health <= 0 then
+        return true
+    end
+    
+    -- Check 2: BodyEffects "Dead" or "Stomped"
+    if be then
+        -- Standard Da Hood variable is "Dead"
+        local deadVal = be:FindFirstChild("Dead")
+        if deadVal and deadVal.Value == true then
+            return true
+        end
+        
+        -- Some versions use "Stomped"
+        local stompedVal = be:FindFirstChild("Stomped")
+        if stompedVal and stompedVal.Value == true then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ForceField Check Function (NEW)
+local function HasForceField(char)
+    if not char then return false end
+    if char:FindFirstChildOfClass("ForceField") then
+        return true
+    end
+    return false
+end
+
+-- Function to safely get character parts
+local function GetCharParts(player)
+    if not player or not player.Character then return nil, nil end
+    return player.Character:FindFirstChild("HumanoidRootPart"), player.Character:FindFirstChild("Humanoid")
+end
+
+-- ==================== ANTI-VOID SYSTEM ====================
+
+-- Anti-Void Variables
+local AntiVoidEnabled = true
+local AntiVoidHRP = (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+
+-- Update HRP reference on respawn
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    AntiVoidHRP = newChar:WaitForChild("HumanoidRootPart")
+    -- RESPAWN FIX: Automatically return to owner logic after a short delay
+    task.delay(1.5, function()
+        if ScriptRunning and not isBuying and not IsTeleporting and not isSavingOwner then
+             print("[Respawn] Character reset, returning to mode...")
+             if Stand.OwnerPlayer then
+                 Stand:Call()
+             else
+                 Stand:Fade()
+             end
+        end
+    end)
+end)
+
+-- Random teleport when idle (anti-void implementation)
+task.spawn(function()
+    while ScriptRunning do
+        -- Prevent Anti-Void if any active stand/combat movement is occurring
+        -- UPDATED: Added AutoBuy.isBuying to exclusion to prevent void loop during purchase
+        if AntiVoidEnabled and
+           not isBuying and
+           not isBuyingGun and
+           not AutoBuy.isBuying and -- FIX: Ensure AutoBuy logic isn't interrupted
+           not isKnockMode and
+           not isGrabMode and
+           not isStompMode and
+           not isLoopMode and
+           not isVoidSpam and 
+           not IsTeleporting and 
+           not isSavingOwner and -- Added exclusion for AutoSave
+           not isUndergroundAttack and -- Added exclusion for a!
+           not Stand.IsActive and
+           not FadeConnection then
+            pcall(function()
+                if AntiVoidHRP and AntiVoidHRP.Parent then
+                    -- Teleport really high and random to avoid detection/killing
+                    AntiVoidHRP.CFrame = CFrame.new(
+                        math.random(-999999, 999999),
+                        math.random(2000, 10000), -- Higher up to be safer
+                        math.random(-999999, 999999)
+                    )
+                    AntiVoidHRP.Velocity = Vector3.zero
+                    AntiVoidHRP.RotVelocity = Vector3.zero
+                else
+                    -- Update ref if missing
+                    local char = LocalPlayer.Character
+                    if char then AntiVoidHRP = char:FindFirstChild("HumanoidRootPart") end
+                end
+            end)
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- Disable void death mechanism
+workspace.FallenPartsDestroyHeight = 0/0
+
+-- Physics optimization to prevent lag
+pcall(function()
+    setfflag("S2PhysicsSenderRate", 1.0E20)
+end)
+
+print("[AntiVoid] Enabled - Void death disabled")
+
+-- ==================== ANTI-SIT SYSTEM ====================
+
+-- Loop to destroy all seats to prevent forced sitting (Anti-Seat)
+task.spawn(function()
+    -- Destroy existing seats immediately
+    pcall(function()
+        for _, seat in ipairs(Workspace:GetDescendants()) do
+            if seat:IsA("Seat") and not IsTeleporting then -- Check flag to allow TP! command to work
+                seat:Destroy()
+            end
+        end
+    end)
+
+    -- Destroy new seats as they spawn
+    Workspace.DescendantAdded:Connect(function(descendant)
+        task.defer(function()
+            if IsTeleporting then return end -- Skip destroying if we are doing tp! command
+
+            if descendant:IsA("Seat") then
+                pcall(function()
+                    descendant:Destroy()
+                end)
+            end
+        end)
+    end)
+
+    print("[AntiSit] Enabled - All seats destroyed")
+end)
+
+-- ==================== GENERAL UTILITY FUNCTIONS ====================
+
+-- Find owner player object by username
+function Stand:FindOwner()
+    local owner = Players:FindFirstChild(OwnerUsername)
+    if owner then
+        Stand.OwnerPlayer = owner
+        Stand.FollowTarget = nil -- Reset follow target to default to owner
+        return owner
+    end
+    return nil
+end
+
+-- Function to resume duty after combat or specific actions
+function Stand:Resume()
+    print("[Stand] Resuming duty (Returning to Owner)...")
+    CombatTarget = nil
+    isShooting = false
+    isIdle = true
+    isKnockMode = false
+    isGrabMode = false
+    isStompMode = false
+    isLoopMode = false
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+    
+    Stand:Call()
+end
+
+-- Get stand's HumanoidRootPart and Humanoid securely
+function Stand:GetStandParts()
+    local char = LocalPlayer.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        return hrp, humanoid
+    end
+    return nil, nil
+end
+
+-- Find player by partial username or display name (Robust Search)
+function Stand:FindTargetPlayer(query)
+    if not query then return nil end
+    query = query:lower()
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+        if name:find(query, 1, true) or displayName:find(query, 1, true) then
+            return player
+        end
+    end
+    return nil
+end
+
+-- Reload all tools in character
+local function reloadTool()
+    pcall(function()
+        local Character = LocalPlayer.Character
+        if Character then
+            for _, tool in ipairs(Character:GetChildren()) do
+                if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                    ReplicatedStorage.MainEvent:FireServer("Reload", tool)
+                end
+            end
+        end
+    end)
+end
+
+-- Unequip all tools to Backpack
+local function UnequipTools()
+    pcall(function()
+        local Character = LocalPlayer.Character
+        local Backpack = LocalPlayer:FindFirstChild("Backpack")
+        if Character and Backpack then
+            for _, tool in ipairs(Character:GetChildren()) do
+                if tool:IsA("Tool") then
+                    tool.Parent = Backpack
+                end
+            end
+        end
+    end)
+end
+
+-- Auto-kill when health is low (prevents death animations/stomping)
+task.spawn(function()
+    while task.wait(0.5) do
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").Health <= 5 then
+            -- Dont delete parts, just set health to 0 to trigger respawn logic properly
+             char:FindFirstChildOfClass("Humanoid").Health = 0
+        end
+    end
+end)
+
+-- ==================== AUTO-BUY WEAPON SYSTEM ====================
+
+-- Get ammo count for a weapon safely
+local function getAmmoCount(weaponName)
+    local success, result = pcall(function()
+        local dataFolder = LocalPlayer:FindFirstChild("DataFolder")
+        if not dataFolder then return nil end
+        local inventory = dataFolder:FindFirstChild("Inventory")
+        if not inventory then return nil end
+        local ammoData = inventory:FindFirstChild(weaponName)
+        if ammoData and ammoData.Value then
+            return tonumber(ammoData.Value)
+        end
+        return nil
+    end)
+    if success and result then
+        return result
+    end
+    return nil
+end
+
+-- Check if gun exists in inventory or on character
+local function hasGun(gunName)
+    local Character = LocalPlayer.Character
+    local Backpack = LocalPlayer:FindFirstChild("Backpack")
+
+    if Backpack then
+        for _, tool in ipairs(Backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == gunName then
+                return true
+            end
+        end
+    end
+
+    if Character then
+        for _, tool in ipairs(Character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name == gunName then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+-- Buy weapon function with retry logic and Void Spam Optimization
+local function buyWeapon(weaponType)
+    if AutoBuy.isBuying or not ScriptRunning then
+        return
+    end
+
+    -- Explicitly stop Fade before buying
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    AutoBuy.isBuying = true
+    isBuyingGun = true
+
+    local config = WeaponConfig[weaponType]
+    if not config then
+        AutoBuy.isBuying = false
+        isBuyingGun = false
+        return
+    end
+
+    print("[AutoBuy] Purchasing " .. config.toolName)
+
+    pcall(function()
+        local Character = LocalPlayer.Character
+        if not Character then return end
+
+        local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then return end
+
+        local ignored = workspace:FindFirstChild("Ignored")
+        if not ignored then return end
+
+        local shop = ignored:FindFirstChild("Shop")
+        if not shop then return end
+
+        local shopItem = shop:FindFirstChild(config.shopName)
+        if not shopItem then
+            print("[AutoBuy] Shop item not found: " .. config.shopName)
+            return
+        end
+
+        local ClickDetector = shopItem:FindFirstChild("ClickDetector")
+        if not ClickDetector then return end
+
+        local shopHead = shopItem:FindFirstChild("Head")
+        if not shopHead then return end
+
+        -- Unequip tools before buying to prevent issues
+        UnequipTools()
+        task.wait(0.05) -- Fast wait
+
+        local attempts = 0
+        local maxAttempts = 30
+
+        while not hasGun(config.toolName) and attempts < maxAttempts and ScriptRunning do
+            Character = LocalPlayer.Character
+            if not Character then break end
+
+            HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+            Humanoid = Character:FindFirstChild("Humanoid")
+            if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then break end
+
+            -- VOID SPAM OPTIMIZATION FOR BUYING
+            -- 1. Void
+            HumanoidRootPart.CFrame = CFrame.new(0, 10000000, 0)
+            HumanoidRootPart.Velocity = Vector3.zero
+            task.wait(0.2)
+
+            -- 2. Shop Position
+            HumanoidRootPart.CFrame = CFrame.new(shopHead.CFrame.Position + Vector3.new(0, 3, 0))
+            HumanoidRootPart.Velocity = Vector3.zero
+            
+            -- 3. Wait 0.18s before firing click detector
+            task.wait(0.18)
+
+            -- Fire click detector
+            fireclickdetector(ClickDetector)
+
+            -- 4. Final wait to complete the cycle
+            task.wait(0.02)
+
+            attempts = attempts + 1
+            
+            -- Check if purchased successfully
+            if hasGun(config.toolName) then
+                print("[AutoBuy] Successfully purchased " .. config.toolName)
+                break
+            end
+        end
+
+        if not hasGun(config.toolName) then
+            print("[AutoBuy] Failed to purchase " .. config.toolName .. " after " .. attempts .. " attempts")
+        end
+    end)
+
+    task.wait(0.1)
+    AutoBuy.isBuying = false
+    isBuyingGun = false
+    -- Resume fading/calling is handled by main logic
+    Stand:Fade()
+end
+
+-- Buy ammo function with bulk purchase logic and Void Spam Optimization
+local function buyAmmo(weaponType)
+    if AutoBuy.isBuying or not ScriptRunning then
+        return
+    end
+
+    -- Explicitly stop Fade before buying
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    AutoBuy.isBuying = true
+    isBuying = true
+
+    local config = WeaponConfig[weaponType]
+    if not config then
+        AutoBuy.isBuying = false
+        isBuying = false
+        return
+    end
+
+    print("[AutoBuy] Purchasing ammo for " .. config.toolName)
+
+    pcall(function()
+        local Character = LocalPlayer.Character
+        if not Character then return end
+
+        local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then return end
+
+        local ignored = workspace:FindFirstChild("Ignored")
+        if not ignored then return end
+
+        local shop = ignored:FindFirstChild("Shop")
+        if not shop then return end
+
+        local ammoShop = shop:FindFirstChild(config.ammoShopName)
+        if not ammoShop then
+            print("[AutoBuy] Ammo shop not found: " .. config.ammoShopName)
+            return
+        end
+
+        local ClickDetector = ammoShop:FindFirstChild("ClickDetector")
+        if not ClickDetector then return end
+
+        local ammoHead = ammoShop:FindFirstChild("Head")
+        if not ammoHead then return end
+
+        -- Unequip tools before buying ammo
+        UnequipTools()
+        task.wait(0.05)
+
+        local previousAmmo = getAmmoCount(config.toolName) or 0
+        local purchaseCount = 0
+        local maxPurchases = 10 -- Buy multiple packs
+        local attempts = 0
+        local maxAttempts = 50
+
+        while purchaseCount < maxPurchases and attempts < maxAttempts and ScriptRunning do
+            Character = LocalPlayer.Character
+            if not Character then break end
+
+            HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+            Humanoid = Character:FindFirstChild("Humanoid")
+            if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then break end
+
+            -- VOID SPAM OPTIMIZATION FOR BUYING
+            -- 1. Void
+            HumanoidRootPart.CFrame = CFrame.new(0, 10000000, 0)
+            HumanoidRootPart.Velocity = Vector3.zero
+            task.wait(0.2)
+
+            -- 2. Shop Position
+            HumanoidRootPart.CFrame = CFrame.new(ammoHead.CFrame.Position + Vector3.new(0, 3, 0))
+            HumanoidRootPart.Velocity = Vector3.zero
+            
+            -- 3. Wait 0.18s before firing click detector
+            task.wait(0.18)
+
+            -- Fire click detector
+            fireclickdetector(ClickDetector)
+
+            -- 4. Final wait to complete the cycle
+            task.wait(0.02)
+
+            -- Check if ammo increased
+            local currentAmmo = getAmmoCount(config.toolName) or 0
+            if currentAmmo > previousAmmo then
+                previousAmmo = currentAmmo
+                purchaseCount = purchaseCount + 1
+            end
+
+            attempts = attempts + 1
+        end
+
+        local finalAmmo = getAmmoCount(config.toolName) or 0
+        print("[AutoBuy] Ammo purchase complete. Total ammo: " .. finalAmmo)
+    end)
+
+    task.wait(0.1)
+    AutoBuy.isBuying = false
+    isBuying = false
+    -- Resume fading/calling is handled by main logic
+    Stand:Fade()
+end
+
+-- Reload specific weapon if ammo is 0
+local function reloadWeapon(weaponName)
+    pcall(function()
+        local Character = LocalPlayer.Character
+        if Character then
+            for _, tool in ipairs(Character:GetChildren()) do
+                if tool:IsA("Tool") and tool.Name == weaponName and tool:FindFirstChild("Ammo") then
+                    local ammo = tool:FindFirstChild("Ammo")
+                    if ammo and ammo.Value and ammo.Value <= 0 then
+                        ReplicatedStorage.MainEvent:FireServer("Reload", tool)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Auto-Equip both weapons (Rifle + Flintlock)
+local function autoEquipWeapons()
+    if AutoBuy.isEquipping then
+        return
+    end
+
+    AutoBuy.isEquipping = true
+
+    pcall(function()
+        local Character = LocalPlayer.Character
+        local Backpack = LocalPlayer:FindFirstChild("Backpack")
+
+        if Character and Backpack then
+            local rifle = Backpack:FindFirstChild(WeaponConfig.rifle.toolName)
+            if rifle and not Character:FindFirstChild(WeaponConfig.rifle.toolName) then
+                rifle.Parent = Character
+            end
+
+            task.wait(0.05)
+
+            local flintlock = Backpack:FindFirstChild(WeaponConfig.flintlock.toolName)
+            if flintlock and not Character:FindFirstChild(WeaponConfig.flintlock.toolName) then
+                flintlock.Parent = Character
+            end
+        end
+    end)
+
+    AutoBuy.isEquipping = false
+end
+
+-- Auto-reload monitoring loop (background task)
+task.spawn(function()
+    while ScriptRunning do
+        task.wait(0.5)
+        if not ScriptRunning then break end
+        pcall(function()
+            local Character = LocalPlayer.Character
+            if Character then
+                for _, tool in ipairs(Character:GetChildren()) do
+                    if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                        local ammo = tool:FindFirstChild("Ammo")
+                        -- Updated to <= 0 for background check to prevent premature voids during active combat
+                        -- The specific <= 1 check is now in the Stomp Logic
+                        if ammo and ammo.Value and ammo.Value <= 0 then
+                            ReplicatedStorage.MainEvent:FireServer("Reload", tool)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Main auto-buy monitoring loop (background task)
+task.spawn(function()
+    print("[AutoBuy] Auto-buy system started")
+
+    while ScriptRunning do
+        task.wait(1)
+        if not ScriptRunning then break end
+
+        pcall(function()
+            if not AutoBuy.isBuying and not isBuying and not isBuyingGun and not IsTeleporting and not isSavingOwner and not isUndergroundAttack then
+                -- Check Rifle
+                if not hasGun(WeaponConfig.rifle.toolName) then
+                    print("[AutoBuy] Rifle not found, purchasing...")
+                    buyWeapon("rifle")
+                    task.wait(0.2)
+                else
+                    local rifleAmmo = getAmmoCount(WeaponConfig.rifle.toolName)
+                    if rifleAmmo and rifleAmmo <= 10 then
+                        print("[AutoBuy] Rifle ammo low (" .. rifleAmmo .. "), purchasing...")
+                        buyAmmo("rifle")
+                        task.wait(0.2)
+                        reloadWeapon(WeaponConfig.rifle.toolName)
+                    end
+                end
+
+                task.wait(0.2)
+
+                -- Check Flintlock
+                if not hasGun(WeaponConfig.flintlock.toolName) then
+                    print("[AutoBuy] Flintlock not found, purchasing...")
+                    buyWeapon("flintlock")
+                    task.wait(0.2)
+                else
+                    local flintAmmo = getAmmoCount(WeaponConfig.flintlock.toolName)
+                    if flintAmmo and flintAmmo <= 10 then
+                        print("[AutoBuy] Flintlock ammo low (" .. flintAmmo .. "), purchasing...")
+                        buyAmmo("flintlock")
+                        task.wait(0.2)
+                        reloadWeapon(WeaponConfig.flintlock.toolName)
+                    end
+                end
+
+                -- Auto-equip both weapons
+                task.wait(0.2)
+                if hasGun(WeaponConfig.rifle.toolName) and hasGun(WeaponConfig.flintlock.toolName) then
+                    autoEquipWeapons()
+                end
+            end
+        end)
+    end
+end)
+
+-- ==================== SHOOTING SYSTEM ====================
+
+-- Shoot target function (Runs on Heartbeat for max fire rate)
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        -- Only shoot if actively in combat mode and shooting is enabled
+        if not CombatTarget or not isShooting then return end
+        if not CombatTarget.Character then return end
+        if not LocalPlayer.Character then return end
+
+        local myChar = LocalPlayer.Character
+        local targetChar = CombatTarget.Character
+
+        local targetHead = targetChar:FindFirstChild("Head")
+        local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+        if not targetHead or not targetHRP then return end
+
+        -- UPDATED KO/DEAD CHECK
+        -- If KO'd, stop firing to allow stomping
+        -- If Dead, stop firing completely
+        if IsTargetKO(targetChar) or IsTargetDead(targetChar) then
+             isShooting = false
+             return
+        end
+
+        -- !!! FORCE FIELD CHECK (FIXED) !!!
+        -- Don't shoot if player has Spawn Protection / ForceField
+        if HasForceField(targetChar) then
+            isShooting = false
+            return
+        end
+
+        local targetGrabbing = targetChar:FindFirstChild("GRABBING_CONSTRAINT")
+        if targetGrabbing then return end
+
+        -- Shoot with all equipped tools that have a Handle
+        for _, tool in ipairs(myChar:GetChildren()) do
+            if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+                local handle = tool:FindFirstChild("Handle")
+                ReplicatedStorage.MainEvent:FireServer(
+                    "ShootGun",
+                    handle,
+                    handle.Position,
+                    targetHead.Position,
+                    targetHead,
+                    Vector3.new(0, 0, 0)
+                )
+            end
+        end
+    end)
+end)
+
+-- ==================== COMBAT HELPERS ====================
+
+-- Activation helper for GKnock mode
+local function ActivateKnockMode(targetPlayer)
+    if not targetPlayer then return end
+
+    print("[Combat] Activating KNOCK mode on " .. targetPlayer.Name)
+    
+    -- Clean previous state
+    isGrabMode = false
+    isStompMode = false
+    isLoopMode = false
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+    
+    -- Disable other modes
+    Stand.IsActive = false
+    if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+    if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+
+    CombatTarget = targetPlayer
+    isShooting = true
+    isIdle = false
+    isKnockMode = true
+end
+
+-- Function to activate STOMP MODE for Protection Retaliation
+local function ActivateProtectionRetaliation(targetPlayer)
+    if not targetPlayer then return end
+    print("[Protection] Retaliating against " .. targetPlayer.Name .. " (Stomp Mode)")
+
+    -- Clean previous state
+    isGrabMode = false
+    isKnockMode = false -- Ensure we are NOT in infinite knock loop
+    isLoopMode = false
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+    
+    -- Disable other modes
+    Stand.IsActive = false
+    if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+    if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+
+    -- Activate Stomp Mode: This will shoot until down, then stomp ONCE, then Resume.
+    CombatTarget = targetPlayer
+    isShooting = true
+    isIdle = false
+    isStompMode = true 
+end
+
+-- ==================== PROTECTION LOOP ====================
+
+-- Protection monitoring system (Detects attacks on whitelist)
+task.spawn(function()
+    while ScriptRunning do
+        task.wait(0.1)
+
+        -- Skip logic if currently auto-buying
+        if AutoBuy.isBuying or isBuying or isBuyingGun then
+            -- do nothing
+        else
+            local playersToMonitor = {}
+            
+            -- Add Protected Players to monitor list from the whitelist ONLY
+            for protectedName, _ in pairs(getgenv().sentryprotected) do
+                local protectedPlayer = Players:FindFirstChild(protectedName)
+                if protectedPlayer then playersToMonitor[protectedName] = protectedPlayer end
+            end
+
+            -- Check all monitored players for damage
+            for name, player in pairs(playersToMonitor) do
+                 if player and player.Character then
+                    local char = player.Character
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    local bodyEffects = char:FindFirstChild("BodyEffects")
+                    local lastDamager = bodyEffects and bodyEffects:FindFirstChild("LastDamager")
+
+                    if humanoid and lastDamager then
+                        local currentHealth = humanoid.Health
+
+                        -- Init health tracking
+                        if getgenv().lastHealths[name] == nil then
+                            getgenv().lastHealths[name] = currentHealth
+                        end
+
+                        -- Check if health decreased (damage taken)
+                        if currentHealth < getgenv().lastHealths[name] then
+                            getgenv().lastHealths[name] = currentHealth
+                            
+                            -- Find Attacker
+                            local attackerName = tostring(lastDamager.Value)
+                            if attackerName ~= "" and attackerName ~= LocalPlayer.Name then
+                                local attacker = Players:FindFirstChild(attackerName)
+                                if attacker then
+                                    -- FIX: Don't switch target if already attacking them
+                                    if CombatTarget ~= attacker then
+                                        print("[Protection] " .. name .. " attacked by " .. attackerName .. " - ACTIVATING S! RETALIATION!")
+                                        -- UPDATED: Uses Stomp logic (s!) instead of Knock logic (k!)
+                                        ActivateProtectionRetaliation(attacker)
+                                    end
+                                end
+                            end
+                        else
+                            getgenv().lastHealths[name] = currentHealth
+                        end
+                    end
+                 end
+            end
+        end
+    end
+end)
+
+-- ==================== AUTO SAVE OWNER (as!) ====================
+
+local function handleAutoSave(enable)
+    AutoSaveEnabled = enable
+    if enable then
+        print("[AutoSave] Enabled - Monitoring owner status")
+        task.spawn(function()
+            while AutoSaveEnabled and ScriptRunning do
+                task.wait(0.5)
+                if not isSavingOwner and not isBuying and not isBuyingGun and not IsTeleporting then
+                    local owner = Stand.OwnerPlayer or Stand:FindOwner()
+                    if owner and owner.Character then
+                         -- Check if Owner is KO'd using robust check
+                         if IsTargetKO(owner.Character) then
+                            print("[AutoSave] Owner KO detected! Initiating rescue...")
+                            isSavingOwner = true
+
+                            -- Stop all other modes
+                            Stand.IsActive = false
+                            if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+                            if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+                            isKnockMode = false; isGrabMode = false; isStompMode = false; isVoidSpam = false; isUndergroundAttack = false;
+                            
+                            pcall(function()
+                                local myChar = LocalPlayer.Character
+                                local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                                local ownerHRP = owner.Character:FindFirstChild("HumanoidRootPart")
+                                local ownerTorso = owner.Character:FindFirstChild("UpperTorso") or owner.Character:FindFirstChild("Torso")
+
+                                if myHRP and ownerHRP and ownerTorso then
+                                    -- 1. Unequip tools first to ensure hands are free to grab
+                                    UnequipTools()
+                                    task.wait(0.1)
+
+                                    local isGrabbed = false
+                                    local totalAttempts = 0
+                                    
+                                    -- Robust Grab Loop - Improved for 1st Try Success
+                                    repeat
+                                        if not IsTargetKO(owner.Character) then break end -- If owner recovered/died
+                                        
+                                        -- TP slightly behind/inside the owner's UpperTorso for perfect grab range
+                                        -- Using UpperTorso is more reliable than HRP for grab constraint
+                                        myHRP.CFrame = ownerTorso.CFrame * CFrame.new(0, 0, 1) 
+                                        myHRP.Velocity = Vector3.zero
+                                        
+                                        -- Rapid fire the grab event
+                                        for i = 1, 5 do
+                                            ReplicatedStorage.MainEvent:FireServer("Grabbing", false)
+                                            task.wait(0.05) -- Fast spam
+                                            if owner.Character:FindFirstChild("GRABBING_CONSTRAINT") then
+                                                isGrabbed = true
+                                                break
+                                            end
+                                        end
+                                        
+                                        totalAttempts = totalAttempts + 1
+                                        task.wait(0.1)
+                                    until isGrabbed or totalAttempts > 10
+
+                                    if isGrabbed then
+                                        print("[AutoSave] Owner secured. Transporting to bank...")
+                                        task.wait(0.2)
+                                        
+                                        -- 3. TP to Safe Spot (Bank)
+                                        local safeSpot = Vector3.new(-328.108856, 23.680668, -291.217621)
+                                        
+                                        -- Multi-step TP to ensure payload comes with us
+                                        for i=1, 5 do
+                                            if myHRP then
+                                                myHRP.CFrame = CFrame.new(safeSpot)
+                                                myHRP.Velocity = Vector3.zero
+                                            end
+                                            task.wait(0.1)
+                                        end
+                                        task.wait(0.5)
+
+                                        -- 4. Drop Owner
+                                        ReplicatedStorage.MainEvent:FireServer("Grabbing", false)
+                                        print("[AutoSave] Owner dropped at safe zone.")
+                                        task.wait(0.5)
+                                    else
+                                        print("[AutoSave] Failed to grab owner after attempts.")
+                                    end
+                                end
+                            end)
+
+                            -- Reset state and return to void
+                            isSavingOwner = false
+                            Stand:Fade()
+                            -- Wait a bit so we don't spam loop if they stay KO'd
+                            task.wait(3)
+                         end
+                    end
+                end
+            end
+        end)
+    else
+        print("[AutoSave] Disabled")
+    end
+end
+
+-- ==================== COMBAT POSITIONING SYSTEMS ====================
+
+-- .gknock positioning AND .s! positioning (Fix for s! from void)
+-- Uses Stepped for maximum update rate (No task.wait lag)
+RunService.Stepped:Connect(function()
+    -- Modified Check: Added 'or isStompMode' to allow s! to TP from void to target
+    if (isKnockMode or isStompMode) and CombatTarget and not isBuying and not isBuyingGun and not AutoBuy.isBuying and not IsTeleporting and not isSavingOwner then
+        pcall(function()
+            local targetChar = CombatTarget.Character
+            local myChar = LocalPlayer.Character
+            if not targetChar or not myChar then return end
+
+            local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not targetHRP or not myHRP then return end
+            
+            -- FIX 1: If target has ForceField, STOP strafing around them!
+            if HasForceField(targetChar) then
+                return
+            end
+
+            -- Check if target is eliminated to resume
+            if IsTargetDead(targetChar) then
+                 Stand:Fade() -- Go to Fade after KO/Kill for k!
+                 return
+            end
+
+            -- Aggressive random TP while shooting
+            -- Using Direct CFrame assignment for instant movement (No Lerp)
+            myHRP.CFrame = CFrame.lookAt(
+                targetHRP.Position + Vector3.new(math.random(-20, 20), 5, math.random(-20, 20)),
+                targetHRP.Position
+            )
+            myHRP.Velocity = Vector3.zero
+            myHRP.RotVelocity = Vector3.zero
+        end)
+    end
+end)
+
+-- .gknock - Stomp logic (The Finisher) & K! Mode Logic
+task.spawn(function()
+    while ScriptRunning do
+        task.wait()
+        if (isKnockMode or isStompMode) and CombatTarget and not isBuying and not isSavingOwner then
+            pcall(function()
+                local targetChar = CombatTarget.Character
+                -- UPDATE CHAR REF
+                local myChar = LocalPlayer.Character
+                
+                if not targetChar or not myChar then
+                    -- If character missing, maybe respawning? Wait a bit, if still gone, resume
+                    task.wait(1)
+                    if not CombatTarget.Character then Stand:Fade() end
+                    return
+                end
+
+                -- FIX 1: Check FF inside stomp loop to prevent trying to stomp a protected player
+                if HasForceField(targetChar) then
+                    isShooting = false
+                    return
+                end
+                
+                local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                if not myHRP then return end
+                
+                -- Improved KO check & Stomp Check
+                local isKO = IsTargetKO(targetChar)
+                local isDead = IsTargetDead(targetChar)
+
+                -- If dead, stop and fade/resume
+                if isDead then
+                    print("[Combat] Target eliminated/Dead")
+                    reloadTool()
+                    UnequipTools()
+                    Stand:Fade()
+                    return
+                end
+
+                if isKO then
+                    -- === UPDATED K! LOGIC: Just knock once then Fade ===
+                    if isKnockMode then
+                        print("[Knock] Target KO'd. Task complete. Fading.")
+                        isShooting = false
+                        isKnockMode = false
+                        Stand:Fade()
+                        return
+                    end
+
+                    -- === S! LOGIC: Stomp ===
+                    isShooting = false
+                    isIdle = false
+
+                    local targetUpperTorso = targetChar:FindFirstChild("UpperTorso")
+                    
+                    if targetUpperTorso then
+                        -- TP to stomp spot instantly
+                        myHRP.Velocity = Vector3.zero
+                        myHRP.RotVelocity = Vector3.zero
+                        myHRP.CFrame = CFrame.new(targetUpperTorso.Position + Vector3.new(0, 3, 0))
+                        task.wait(0.15)
+                        ReplicatedStorage.MainEvent:FireServer("Stomp")
+                        
+                        -- === NEW RELOAD IN VOID LOGIC (Post-Stomp) ===
+                        task.wait(0.2)
+                        pcall(function()
+                            local Char = LocalPlayer.Character
+                            if Char then
+                                for _, tool in ipairs(Char:GetChildren()) do
+                                    if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                                        -- CHECK: Only reload if ammo is 0 or 1
+                                        if tool.Ammo.Value <= 1 then 
+                                             print("[Combat] Ammo low (" .. tool.Ammo.Value .. "), Reloading in Void...")
+                                             ReplicatedStorage.MainEvent:FireServer("Reload", tool)
+                                             -- This triggers BodyEffects.Reload -> True
+                                             -- The Void Protection loop will immediately see this and void the player.
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+                        -- =============================================
+                    end
+
+                elseif not isKO and not isDead then
+                    -- Target alive, ensure shooting is enabled
+                    isShooting = true
+                    isIdle = false
+                end
+            end)
+        end
+    end
+end)
+
+-- .gbring - Grab logic (FIXED: Properly returns after job done)
+task.spawn(function()
+    while ScriptRunning do
+        task.wait()
+        if isGrabMode and CombatTarget and not isBuying and not isSavingOwner then
+            pcall(function()
+                local targetChar = CombatTarget.Character
+                local myChar = LocalPlayer.Character
+
+                if not targetChar or not myChar then
+                    Stand:Resume()
+                    return
+                end
+
+                local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+
+                if IsTargetDead(targetChar) then
+                    print("[Combat] Target dead (Bring Mode)")
+                    Stand:Resume()
+                    return
+                end
+
+                -- Use improved KO detection
+                local isKO = IsTargetKO(targetChar)
+                local isGrabbed = targetChar:FindFirstChild("GRABBING_CONSTRAINT") ~= nil
+
+                -- PHASE 1: KO Target (if necessary)
+                if not isKO then
+                    -- FF Check for bring mode
+                    if HasForceField(targetChar) then
+                        isShooting = false
+                        return
+                    end
+
+                    isShooting = true
+                    isIdle = false
+                    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+                    if myHRP and targetHRP then
+                         myHRP.CFrame = CFrame.lookAt(
+                            targetHRP.Position + Vector3.new(math.random(-15, 15), 5, math.random(-15, 15)),
+                            targetHRP.Position
+                        )
+                    end
+                    return
+                end
+
+                -- Stop shooting once KO'd
+                isShooting = false
+
+                -- PHASE 2: Grab attempt
+                if isKO and not isGrabbed then
+                    local targetUpperTorso = targetChar:FindFirstChild("UpperTorso")
+
+                    if targetUpperTorso and myHRP then
+                        myHRP.Velocity = Vector3.zero
+                        myHRP.CFrame = CFrame.new(targetUpperTorso.Position + Vector3.new(0, 3, 0))
+                        task.wait(0.2)
+                        ReplicatedStorage.MainEvent:FireServer("Grabbing", false)
+                        task.wait(0.5) 
+                        isGrabbed = targetChar:FindFirstChild("GRABBING_CONSTRAINT") ~= nil
+                    end
+                end
+
+                -- PHASE 3: Teleport and Drop
+                if isGrabbed then
+                    print("[Combat] Grab successful, teleporting to owner.")
+                    local ReturnTarget = Stand.FollowTarget or Stand.OwnerPlayer or Stand:FindOwner()
+
+                    if ReturnTarget and ReturnTarget.Character and myHRP then
+                        local ReturnHRP = ReturnTarget.Character:FindFirstChild("HumanoidRootPart")
+                        if ReturnHRP then
+                            -- Teleport self (carrying target) to owner's position (BEHIND)
+                            for i=1, 5 do
+                                myHRP.CFrame = ReturnHRP.CFrame * CFrame.new(0, 0, 4)
+                                task.wait(0.05)
+                            end
+                        end
+                    end
+
+                    -- Release target
+                    ReplicatedStorage.MainEvent:FireServer("Grabbing", false)
+                    task.wait(0.3)
+                    
+                    -- DONE: Resume
+                    Stand:Resume()
+                end
+            end)
+        end
+    end
+end)
+
+-- .l - Loop stomp mode
+task.spawn(function()
+    local lastStompTime = 0
+    local stompCooldown = 2
+
+    while ScriptRunning do
+        if isLoopMode and CombatTarget then
+            pcall(function()
+                local targetChar = CombatTarget.Character
+                local myChar = LocalPlayer.Character
+
+                if targetChar and myChar then
+                    local isKO = IsTargetKO(targetChar)
+                    local isDead = IsTargetDead(targetChar)
+                    
+                    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                    local currentTime = os.clock()
+
+                    if isDead then
+                        isShooting = false
+                        if myHRP then
+                            myHRP.CFrame = CFrame.new(math.random(-9999, 9999), 9999, math.random(-9999, 9999))
+                        end
+                        -- Wait for respawn (Don't resume, this is Loop mode)
+                    elseif isKO then
+                        isShooting = false
+                        local targetUpperTorso = targetChar:FindFirstChild("UpperTorso")
+                        if targetUpperTorso and myHRP then
+                            myHRP.Velocity = Vector3.zero
+                            myHRP.CFrame = CFrame.new(targetUpperTorso.Position + Vector3.new(0, 3, 0))
+                            task.wait(0.1)
+                        end
+                        ReplicatedStorage.MainEvent:FireServer("Stomp")
+                        
+                        -- === NEW RELOAD IN VOID LOGIC (Post-Stomp Loop) ===
+                        task.wait(0.2)
+                        pcall(function()
+                            local Char = LocalPlayer.Character
+                            if Char then
+                                for _, tool in ipairs(Char:GetChildren()) do
+                                    if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                                        -- CHECK: Only reload if ammo is 0 or 1
+                                        if tool.Ammo.Value <= 1 then 
+                                             print("[Loop] Ammo low (" .. tool.Ammo.Value .. "), Reloading in Void...")
+                                             ReplicatedStorage.MainEvent:FireServer("Reload", tool)
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+                        -- ===================================================
+                    else
+                        -- FF Check for Loop mode
+                        if HasForceField(targetChar) then
+                            isShooting = false
+                            -- Don't strafe if FF
+                            return
+                        end
+
+                        isShooting = true
+                        local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+                        if targetHRP and myHRP then
+                            myHRP.CFrame = CFrame.lookAt(
+                                targetHRP.Position + Vector3.new(math.random(-25, 25), 0, math.random(-25, 25)),
+                                targetHRP.Position
+                            )
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait()
+    end
+end)
+
+-- ==================== RELOAD IN VOID PROTECTION ====================
+-- Checks BodyEffects.Reload. If true, send to void (unless stomping)
+task.spawn(function()
+    RunService.Stepped:Connect(function()
+        if not ScriptRunning then return end
+        
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+            
+            local bodyEffects = char:FindFirstChild("BodyEffects")
+            if not bodyEffects then return end
+            
+            local reloadVal = bodyEffects:FindFirstChild("Reload")
+            if reloadVal and reloadVal.Value == true then
+                
+                -- Check exceptions: If we are in Stomp or Loop mode, check if we are currently knocking the target
+                -- If the target is KO'd, we are about to stomp, so DO NOT VOID.
+                -- If the target is NOT KO'd, we are shooting, so if we reload, we MUST VOID.
+                -- If we just finished stomping and triggered a reload (via our new logic), IsTargetKO might vary or be irrelevant
+                -- But since we WANT to void when we trigger reload manually, this logic serves us well.
+                
+                local shouldVoid = true
+                
+                if (isStompMode or isLoopMode) and CombatTarget and CombatTarget.Character then
+                    if IsTargetKO(CombatTarget.Character) then
+                        shouldVoid = false -- We need to stomp now, don't void
+                    end
+                end
+                
+                -- Also don't void if we are already buying (since buying handles its own voiding)
+                if AutoBuy.isBuying or isBuying or isBuyingGun then
+                    shouldVoid = false
+                end
+                
+                if shouldVoid then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.CFrame = CFrame.new(0, 10000000, 0)
+                        hrp.Velocity = Vector3.zero
+                    end
+                end
+            end
+        end)
+    end)
+end
+
+-- ==================== FADE FUNCTION ====================
+
+-- Fade: Random teleport in 5000 stud radius to stay hidden/idle
+function Stand:Fade()
+    -- Stop all other modes
+    if Stand.FollowConnection then
+        pcall(function() Stand.FollowConnection:Disconnect() end)
+        Stand.FollowConnection = nil
+    end
+    if Stand.TargetConnection then
+        pcall(function() Stand.TargetConnection:Disconnect() end)
+        Stand.TargetConnection = nil
+    end
+
+    Stand.IsActive = false
+    Stand.IsTargeting = false
+    Stand.TargetPlayer = nil
+
+    -- Clear combat states
+    CombatTarget = nil
+    isShooting = false
+    isIdle = true
+    isKnockMode = false
+    isGrabMode = false
+    isStompMode = false
+    isLoopMode = false
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+
+    -- Reload and unequip for readiness
+    reloadTool()
+    UnequipTools()
+
+    -- Stop previous fade loop
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    -- Start random teleporting every frame (Stepped for speed)
+    FadeConnection = RunService.Stepped:Connect(function()
+        if not ScriptRunning then
+            if FadeConnection then
+                pcall(function() FadeConnection:Disconnect() end)
+                FadeConnection = nil
+            end
+            return
+        end
+
+        -- Stop fade if combat started, stand became active, or WE ARE BUYING
+        -- FIX: Added isBuying, isBuyingGun, AutoBuy.isBuying to prevent Void loop while buying
+        if Stand.IsActive or isKnockMode or isGrabMode or isStompMode or isLoopMode or CombatTarget or isVoidSpam or IsTeleporting or isSavingOwner or isBuying or isBuyingGun or AutoBuy.isBuying or isUndergroundAttack then
+            if FadeConnection then
+                pcall(function() FadeConnection:Disconnect() end)
+                FadeConnection = nil
+                print("Combat/Activity: Fade stopped")
+            end
+            return
+        end
+
+        pcall(function()
+            local hrp = Stand:GetStandParts()
+            if hrp then
+                -- Random high position
+                hrp.CFrame = CFrame.new(
+                    math.random(-5000, 5000),
+                    math.random(1000, 5000),
+                    math.random(-5000, 5000)
+                )
+                hrp.Velocity = Vector3.zero
+            end
+        end)
+    end)
+
+    print("Stand: Faded - Random teleport active")
+end
+
+-- ==================== TARGET ORBITING ====================
+
+-- Orbit target function
+function Stand:Target(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then
+        print("Stand: Target not found")
+        return
+    end
+
+    -- Stop fade if active
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    -- Stop other connections
+    if Stand.FollowConnection then
+        pcall(function() Stand.FollowConnection:Disconnect() end)
+        Stand.FollowConnection = nil
+    end
+    if Stand.TargetConnection then
+        pcall(function() Stand.TargetConnection:Disconnect() end)
+        Stand.TargetConnection = nil
+    end
+
+    Stand.IsActive = true
+    Stand.IsTargeting = true
+    Stand.TargetPlayer = targetPlayer
+
+    -- Reset void spam
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+
+    local hrp, humanoid = Stand:GetStandParts()
+    if not hrp or not humanoid then
+        print("Stand: Cannot get stand parts")
+        return
+    end
+
+    pcall(function()
+        hrp.Anchored = false
+        humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+    end)
+
+    local angle = 0
+
+    print("Stand: Orbiting " .. targetPlayer.Name)
+
+    Stand.TargetConnection = RunService.Stepped:Connect(function(dt)
+        if not ScriptRunning then
+            if Stand.TargetConnection then
+                pcall(function() Stand.TargetConnection:Disconnect() end)
+                Stand.TargetConnection = nil
+            end
+            return
+        end
+
+        pcall(function()
+            local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not targetHRP then
+                print("Stand: Target lost")
+                Stand:Untarget()
+                return
+            end
+
+            angle = angle + 18 * dt
+
+            local chaos = math.sin(os.clock() * 0.7)
+            local chaos_x = 5 * math.sin(os.clock() * 5)
+
+            local orbitalX = targetHRP.Position.X + 12 * math.cos(angle + chaos_x)
+            local orbitalZ = targetHRP.Position.Z + 12 * math.sin(angle)
+            local verticalOffset = 8 * math.sin(angle * 4 + chaos)
+
+            local targetPos = Vector3.new(
+                orbitalX,
+                targetHRP.Position.Y + verticalOffset,
+                orbitalZ
+            )
+
+            local currentHrp = Stand:GetStandParts()
+            if currentHrp then
+                currentHrp.CFrame = CFrame.new(targetPos, targetHRP.Position) * CFrame.Angles(0, math.pi, 0)
+                currentHrp.Velocity = Vector3.zero
+                currentHrp.RotVelocity = Vector3.zero
+            end
+        end)
+    end)
+end
+
+-- Return to owner following
+function Stand:Untarget()
+    if Stand.TargetConnection then
+        pcall(function() Stand.TargetConnection:Disconnect() end)
+        Stand.TargetConnection = nil
+    end
+    Stand.IsTargeting = false
+    Stand.TargetPlayer = nil
+
+    CombatTarget = nil
+    isShooting = false
+    isIdle = true
+
+    print("Stand: Untargeted")
+    Stand:Call()
+end
+
+-- ==================== OWNER FOLLOWING ====================
+
+-- Call stand to owner (or FollowTarget)
+function Stand:Call()
+    -- Don't call if in combat or saving
+    if isKnockMode or isGrabMode or isStompMode or isLoopMode or CombatTarget or isVoidSpam or IsTeleporting or isSavingOwner or isUndergroundAttack then
+        -- Force cleanup if active
+        if isKnockMode or isGrabMode or isStompMode or isUndergroundAttack then
+            print("Stand: Switching from combat to follow...")
+            isKnockMode = false; isGrabMode = false; isStompMode = false; isUndergroundAttack = false; CombatTarget = nil;
+        else
+            return
+        end
+    end
+
+    -- Don't call if buying weapons or ammo
+    if isBuying or isBuyingGun or AutoBuy.isBuying then
+        return
+    end
+
+    -- Stop fade
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    -- Stop targeting
+    if Stand.TargetConnection then
+        pcall(function() Stand.TargetConnection:Disconnect() end)
+        Stand.TargetConnection = nil
+    end
+    Stand.IsTargeting = false
+
+    -- Determine who to follow
+    local Target = Stand.FollowTarget or Stand.OwnerPlayer or Stand:FindOwner()
+
+    if not Target or not Target.Character then
+        return
+    end
+
+    local TargetHRP = Target.Character:FindFirstChild("HumanoidRootPart")
+    if not TargetHRP then
+        return
+    end
+
+    local hrp, humanoid = Stand:GetStandParts()
+    if not hrp or not humanoid then
+        return
+    end
+
+    Stand.IsActive = true
+
+    pcall(function()
+        hrp.Anchored = false
+        humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+        -- Snap to target position immediately
+        hrp.CFrame = TargetHRP.CFrame * CFrame.new(Stand.Offset)
+        hrp.Velocity = Vector3.zero
+        hrp.RotVelocity = Vector3.zero
+    end)
+
+    print("Stand: Following " .. Target.Name)
+
+    -- Establish new follow loop
+    if Stand.FollowConnection then
+        pcall(function() Stand.FollowConnection:Disconnect() end)
+    end
+
+    -- UPDATED: Faster Follow Loop (Removed Lerp for Instant Snap)
+    Stand.FollowConnection = RunService.Stepped:Connect(function()
+        if not ScriptRunning then
+            if Stand.FollowConnection then
+                pcall(function() Stand.FollowConnection:Disconnect() end)
+                Stand.FollowConnection = nil
+            end
+            return
+        end
+
+        -- Stop following if combat/saving started
+        if isKnockMode or isGrabMode or isStompMode or isLoopMode or CombatTarget or isVoidSpam or IsTeleporting or isSavingOwner or isUndergroundAttack then
+            if Stand.FollowConnection then
+                pcall(function() Stand.FollowConnection:Disconnect() end)
+                Stand.FollowConnection = nil
+            end
+            Stand.IsActive = false
+            return
+        end
+
+        -- Stop following if buying
+        if isBuying or isBuyingGun or AutoBuy.isBuying then
+            if Stand.FollowConnection then
+                pcall(function() Stand.FollowConnection:Disconnect() end)
+                Stand.FollowConnection = nil
+            end
+            Stand.IsActive = false
+            return
+        end
+
+        pcall(function()
+            local currentHrp = Stand:GetStandParts()
+            if not currentHrp then return end
+
+            local followTarget = Stand.FollowTarget or Stand.OwnerPlayer
+            if not followTarget or not followTarget.Character then return end
+
+            local targetHRP = followTarget.Character:FindFirstChild("HumanoidRootPart")
+            if not targetHRP then return end
+
+            if Stand.IsActive and not Stand.IsTargeting then
+                -- Direct CFrame assignment for maximum stickiness (No lagging behind)
+                local targetCFrame = targetHRP.CFrame * CFrame.new(Stand.Offset)
+                currentHrp.CFrame = targetCFrame
+                currentHrp.Velocity = Vector3.zero
+                currentHrp.RotVelocity = Vector3.zero
+
+                if currentHrp.Anchored then
+                    currentHrp.Anchored = false
+                end
+            end
+        end)
+    end)
+end
+
+-- ==================== VOID SPAM SYSTEM ====================
+
+local function handleVoidDrop()
+    print("[Void] Dropping to void...")
+    -- Clear states
+    Stand.IsActive = false
+    if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+    if Stand.TargetConnection then pcall(function() Stand.TargetConnection:Disconnect() end) Stand.TargetConnection = nil end
+    if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 10000000, 0)
+        end
+    end)
+end
+
+local function handleVoidSpam(enable)
+    if enable then
+        if isVoidSpam then return end
+        print("[Void] Void Spam Enabled")
+
+        -- Stop other modes
+        Stand.IsActive = false
+        if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+        if Stand.TargetConnection then pcall(function() Stand.TargetConnection:Disconnect() end) Stand.TargetConnection = nil end
+        if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+
+        isVoidSpam = true
+        IsTeleporting = false
+        isSavingOwner = false
+        isUndergroundAttack = false
+
+        task.spawn(function()
+            while isVoidSpam and ScriptRunning do
+                -- 1. Void Position
+                pcall(function()
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = CFrame.new(0, 10000000, 0)
+                    end
+                end)
+                task.wait(0.3)
+
+                if not isVoidSpam then break end
+
+                -- 2. Owner Position (Call Position)
+                pcall(function()
+                    local ReturnTarget = Stand.FollowTarget or Stand.OwnerPlayer or Stand:FindOwner()
+                    local char = LocalPlayer.Character
+
+                    if ReturnTarget and ReturnTarget.Character and ReturnTarget.Character:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = ReturnTarget.Character.HumanoidRootPart.CFrame * CFrame.new(Stand.Offset)
+                    end
+                end)
+                task.wait(0.05)
+            end
+
+            -- When turned off, return to void
+            if not isVoidSpam and ScriptRunning then
+                 handleVoidDrop()
+            end
+        end)
+    else
+        print("[Void] Void Spam Disabled - Returning to Void")
+        isVoidSpam = false
+        task.wait(0.1)
+        handleVoidDrop()
+    end
+end
+
+-- ==================== TELEPORT COMMAND (tp!) ====================
+
+-- Teleport Locations Config
+local TpLocations = {
+    bank = {
+        hold = Vector3.new(-443.60626220703125, 38.99485397338867, -284.7694396972656),
+        drop = Vector3.new(-881.9063720703125, 115.99784851074219, -857.9408569335938)
+    },
+    rev = {
+        drop = Vector3.new(-640.8284, 47.4991, -105.9045),
+        hold = Vector3.new(-640.8284, 347.4991, -105.9045) -- +300 Y
+    },
+    roof1 = {
+        drop = Vector3.new(-326.8387, 80.4318, -299.7459),
+        hold = Vector3.new(-326.8387, 380.4318, -299.7459) -- +300 Y
+    },
+    roof2 = {
+        drop = Vector3.new(-438.6041, 80.4760, -224.9503),
+        hold = Vector3.new(-438.6041, 380.4760, -224.9503) -- +300 Y
+    },
+    uphill = {
+        drop = Vector3.new(435.8857, 106.6817, -624.2000),
+        hold = Vector3.new(435.8857, 406.6817, -624.2000) -- +300 Y
+    },
+    flintlock = {
+        drop = Vector3.new(-173.1670, 53.8086, -108.6511),
+        hold = Vector3.new(-173.1670, 353.8086, -108.6511) -- +300 Y
+    },
+    mil = {
+        drop = Vector3.new(-40.4651, 65.7530, -926.8167),
+        hold = Vector3.new(-40.4651, 365.7530, -926.8167) -- +300 Y
+    },
+    db = {
+        drop = Vector3.new(-1043.1888, 80.4086, -248.3395),
+        hold = Vector3.new(-1043.1888, 380.4086, -248.3395) -- +300 Y
+    }
+}
+
+-- UPDATED: Handle tp! command (User to Place, User to User, or Owner to User)
+-- Supports waiting for passenger to exit
+local function handleTpCommand(arg1, arg2)
+    -- Disable other modes first
+    Stand.IsActive = false
+    if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+    if Stand.TargetConnection then pcall(function() Stand.TargetConnection:Disconnect() end) Stand.TargetConnection = nil end
+    if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+
+    isKnockMode = false; isGrabMode = false; isStompMode = false; isLoopMode = false
+    isVoidSpam = false; CombatTarget = nil; isSavingOwner = false; isUndergroundAttack = false
+
+    -- Logic to determine Destination and Passenger
+    -- Case 1: tp! bank (Dest=bank, Pass=Owner)
+    -- Case 2: tp! bank targetUser (Dest=bank, Pass=targetUser)
+    -- Case 3: tp! destUser (Dest=destUser, Pass=Owner)
+    -- Case 4: tp! destUser targetUser (Dest=destUser, Pass=targetUser)
+
+    local destinationKey = arg1:lower()
+    local passengerQuery = arg2
+
+    local destIsPlace = false
+    local destVector = nil
+    local destPlayer = nil
+    
+    -- Check if dest is a place
+    if TpLocations[destinationKey] then
+        destIsPlace = true
+        destVector = TpLocations[destinationKey]
+    else
+        -- Check if dest is a user
+        destPlayer = Stand:FindTargetPlayer(arg1)
+        if not destPlayer then
+            print("[TP] Invalid destination (Place or User not found): " .. arg1)
+            Stand:Fade()
+            return
+        end
+    end
+
+    -- Determine Passenger
+    local passenger = nil
+    if passengerQuery and passengerQuery ~= "" then
+        passenger = Stand:FindTargetPlayer(passengerQuery)
+    else
+        passenger = Stand.FollowTarget or Stand.OwnerPlayer or Stand:FindOwner()
+    end
+
+    if not passenger then
+        print("[TP] Passenger not found")
+        Stand:Fade()
+        return
+    end
+
+    if not passenger.Character or not passenger.Character:FindFirstChild("HumanoidRootPart") then
+        print("[TP] Passenger character not found")
+        Stand:Fade()
+        return
+    end
+
+    local destName = destIsPlace and destinationKey or destPlayer.Name
+    print("[TP] Transporting " .. passenger.Name .. " to " .. destName)
+    IsTeleporting = true -- Bypasses Anti-Sit
+
+    task.spawn(function()
+        local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local HRP = Character:WaitForChild("HumanoidRootPart")
+        local Humanoid = Character:WaitForChild("Humanoid")
+
+        -- Reset tools
+        UnequipTools()
+
+        -- 1. Grab CFrame of the shop item to buy bike
+        local ignored = Workspace:FindFirstChild("Ignored")
+        if not ignored then IsTeleporting = false; Stand:Fade() return end
+        local shop = ignored:FindFirstChild("Shop")
+        if not shop then IsTeleporting = false; Stand:Fade() return end
+
+        local shopItem = shop:FindFirstChild("[FoodsCart] - $16")
+        if not shopItem then warn("Shop item not found") IsTeleporting = false; Stand:Fade() return end
+
+        local shopHead = shopItem:WaitForChild("Head")
+        local shopClick = shopItem:WaitForChild("ClickDetector")
+        
+        -- 2. TP local player to the shop item
+        HRP.CFrame = shopHead.CFrame * CFrame.new(0, 3, 0)
+        HRP.Velocity = Vector3.zero
+        task.wait(0.1)
+
+        -- 3. Buy the bike
+        fireclickdetector(shopClick)
+
+        -- 4. Wait until vehicle appears (Robust check)
+        local bikeName = LocalPlayer.Name .. "BIKE"
+        local vehiclesFolder = Workspace:WaitForChild("OldVehicles")
+
+        local bike = vehiclesFolder:WaitForChild(bikeName, 5) -- Waits up to 5 seconds
+        if not bike then
+            warn("Bike did not spawn")
+            IsTeleporting = false
+            Stand:Fade()
+            return
+        end
+
+        -- 5. Teleport local player to VehicleSeat
+        local vehicleSeat = bike:WaitForChild("VehicleSeat")
+
+        -- We teleport slightly above the seat and force a sit
+        HRP.CFrame = vehicleSeat.CFrame * CFrame.new(0, 2, 0)
+        task.wait(0.1)
+        vehicleSeat:Sit(Humanoid)
+
+        -- 6. Verify we are driving (Wait for SeatWeld)
+        local weld = vehicleSeat:WaitForChild("SeatWeld", 5)
+        if not weld then
+             print("[TP] Failed to sit in driver seat")
+             IsTeleporting = false
+             Stand:Fade()
+             return
+        end
+        print("[TP] Driver seated. Catching passenger...")
+
+        -- 7. Capture Target Logic
+        local passengerSeat = bike:WaitForChild("Seat") -- The food basket seat
+        local captureConnection
+
+        -- Start looping teleport to passenger (High speed update)
+        captureConnection = RunService.Heartbeat:Connect(function()
+            if passenger.Character and passenger.Character:FindFirstChild("HumanoidRootPart") and bike.Parent and IsTeleporting then
+                -- Teleport the bike (via HRP since we are seated) BEHIND the passenger
+                if not passengerSeat:FindFirstChild("SeatWeld") then
+                    HRP.CFrame = passenger.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3) -- Behind
+                    HRP.Velocity = Vector3.zero
+                end
+            end
+        end)
+
+        -- Wait until the passenger seat has a SeatWeld (Target is caught)
+        local timeElapsed = 0
+        while timeElapsed < 20 and not passengerSeat:FindFirstChild("SeatWeld") and IsTeleporting and bike.Parent do
+             task.wait(0.1)
+             timeElapsed = timeElapsed + 0.1
+        end
+
+        -- Stop catching
+        captureConnection:Disconnect()
+
+        if passengerSeat:FindFirstChild("SeatWeld") then
+            print("[TP] Passenger captured!")
+        else
+            print("[TP] Failed to capture passenger (Timeout/Escaped)")
+            IsTeleporting = false
+            Stand:Fade()
+            return
+        end
+
+        -- 8. Transport to Destination
+        local transportConnection
+        print("[TP] Transporting...")
+
+        transportConnection = RunService.Heartbeat:Connect(function()
+            if bike.Parent and IsTeleporting then
+                if destIsPlace then
+                    -- Go to hold position first if available, otherwise just drop
+                    local pos = destVector.hold or destVector.drop
+                    HRP.CFrame = CFrame.new(pos)
+                    HRP.Velocity = Vector3.zero
+                elseif destPlayer and destPlayer.Character and destPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    -- Go to player
+                    HRP.CFrame = destPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 5)
+                    HRP.Velocity = Vector3.zero
+                end
+            end
+        end)
+
+        -- Hold for a moment to ensure loading/sync
+        task.wait(1.5)
+
+        -- If destination is a place with separate drop zone, move there now
+        if destIsPlace and destVector.hold and destVector.drop then
+             task.wait(0.2)
+             -- Brief pause then drop
+             transportConnection:Disconnect()
+             HRP.CFrame = CFrame.new(destVector.drop) + Vector3.new(0, 3, 0)
+             HRP.Velocity = Vector3.zero
+             -- Reconnect loop to hold at drop
+             transportConnection = RunService.Heartbeat:Connect(function()
+                if bike.Parent and IsTeleporting then
+                    HRP.CFrame = CFrame.new(destVector.drop) + Vector3.new(0, 3, 0)
+                    HRP.Velocity = Vector3.zero
+                end
+             end)
+        end
+
+        print("[TP] Arrived. Waiting for passenger exit...")
+        
+        -- 9. WAIT FOR EXIT (Robust Check)
+        local exitWaitTime = 0
+        local maxWait = 60 -- Wait up to 60 seconds
+        
+        while passengerSeat:FindFirstChild("SeatWeld") and exitWaitTime < maxWait and IsTeleporting and bike.Parent do
+             task.wait(0.2)
+             exitWaitTime = exitWaitTime + 0.2
+        end
+
+        transportConnection:Disconnect()
+
+        -- 10. Finish
+        task.wait(0.1)
+        
+        -- Force unsit local player
+        Humanoid.Sit = false
+        task.wait(0.1)
+        Humanoid.Jump = true
+        
+        -- Destroy bike
+        if bike then bike:Destroy() end
+
+        -- Cleanup
+        IsTeleporting = false
+        print("[TP] Transport Complete")
+        Stand:Fade() 
+    end)
+end
+
+-- ==================== NEW COMMANDS: SPECTATE (v!) & UNDERGROUND ATTACK (a!) ====================
+
+local function handleSpectate(target)
+    if not target then return end
+    print("[Spectate] Viewing " .. target.Name)
+    local camera = Workspace.CurrentCamera
+    if target.Character and target.Character:FindFirstChild("Humanoid") then
+        camera.CameraSubject = target.Character.Humanoid
+    end
+end
+
+local function handleUnSpectate()
+    print("[Spectate] Returned view to local player")
+    local camera = Workspace.CurrentCamera
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        camera.CameraSubject = LocalPlayer.Character.Humanoid
+    end
+end
+
+local function handleUndergroundAttack(target)
+    if not target then return end
+    print("[Underground] Attacking " .. target.Name .. " from below!")
+    
+    -- Clear other modes
+    Stand.IsActive = false
+    if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+    if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+    isKnockMode = false; isGrabMode = false; isStompMode = false; isVoidSpam = false; IsTeleporting = false; isSavingOwner = false
+    
+    CombatTarget = target
+    isUndergroundAttack = true
+    
+    -- Equip Combat
+    pcall(function()
+        local Backpack = LocalPlayer:FindFirstChild("Backpack")
+        local Combat = Backpack and Backpack:FindFirstChild("Combat")
+        if Combat then Combat.Parent = LocalPlayer.Character end
+    end)
+    
+    -- Start Attack Loop
+    task.spawn(function()
+        while isUndergroundAttack and ScriptRunning do
+            pcall(function()
+                local tChar = CombatTarget.Character
+                local mChar = LocalPlayer.Character
+                
+                if tChar and mChar and tChar:FindFirstChild("HumanoidRootPart") and mChar:FindFirstChild("HumanoidRootPart") then
+                    
+                    -- !!! FORCE FIELD CHECK (FIXED) !!!
+                    if HasForceField(tChar) then
+                        -- Wait, don't attack
+                        return
+                    end
+
+                    local tHRP = tChar.HumanoidRootPart
+                    local mHRP = mChar.HumanoidRootPart
+                    
+                    -- Stay directly under target
+                    -- Y offset -3.5 is usually just under the floor but close enough to hit
+                    mHRP.CFrame = tHRP.CFrame * CFrame.new(0, -3.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
+                    mHRP.Velocity = Vector3.zero
+                    
+                    -- Activate tool (Punch)
+                    local tool = mChar:FindFirstChild("Combat")
+                    if tool then
+                        tool:Activate()
+                    else
+                         -- Try equipping again if lost
+                         local Backpack = LocalPlayer:FindFirstChild("Backpack")
+                         local Combat = Backpack and Backpack:FindFirstChild("Combat")
+                         if Combat then Combat.Parent = mChar end
+                    end
+                end
+            end)
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+-- ==================== COMBAT COMMAND HANDLERS ====================
+
+-- Handle k! command
+local function handleGKnockCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            ActivateKnockMode(player)
+            return
+        end
+    end
+    print("[Knock] Target not found")
+end
+
+-- Handle b! command
+local function handleGBringCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            print("[Command] Stopping all stand modes for b!")
+            -- Clear modes
+            Stand.IsActive = false
+            if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+            if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+            isKnockMode = false; isStompMode = false; isLoopMode = false; isVoidSpam = false; IsTeleporting = false; isSavingOwner = false; isUndergroundAttack = false;
+
+            CombatTarget = player
+            isShooting = true
+            isIdle = false
+            isGrabMode = true
+            print("[Bring] Targeting " .. player.Name)
+            return
+        end
+    end
+    print("[Bring] Target not found")
+end
+
+-- Handle s! command
+local function handleStompCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            print("[Command] Starting s! command")
+            
+            -- Explicitly stop Fade (and any other mode) immediately
+            if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+            Stand.IsActive = false
+            if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+            
+            isKnockMode = false; isGrabMode = false; isLoopMode = false; isVoidSpam = false; IsTeleporting = false; isSavingOwner = false; isUndergroundAttack = false;
+
+            reloadTool()
+            CombatTarget = player
+            isShooting = true
+            isIdle = false
+            isStompMode = true -- Set Stomp Mode
+            print("[Stomp] Targeting " .. player.Name)
+            return
+        end
+    end
+    print("[Stomp] Target not found")
+end
+
+-- Handle loop! command
+local function handleLoopCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            print("[Command] Stopping all stand modes for loop!")
+            -- Clear modes
+            Stand.IsActive = false
+            if Stand.FollowConnection then pcall(function() Stand.FollowConnection:Disconnect() end) Stand.FollowConnection = nil end
+            if FadeConnection then pcall(function() FadeConnection:Disconnect() end) FadeConnection = nil end
+            isKnockMode = false; isGrabMode = false; isStompMode = false; isVoidSpam = false; IsTeleporting = false; isSavingOwner = false; isUndergroundAttack = false;
+
+            reloadTool()
+            CombatTarget = player
+            isShooting = true
+            isIdle = false
+            isLoopMode = true
+            print("[Loop] Targeting " .. player.Name)
+            return
+        end
+    end
+    print("[Loop] Target not found")
+end
+
+-- Handle fix! command (UPDATED: Sends to Void instead of Call)
+local function handleFixCommand()
+    print("Fix: Clearing states...")
+
+    -- Clear global states
+    pcall(function()
+        getgenv().enabled = false
+        getgenv().enabled1 = false
+        getgenv().downonly = false
+    end)
+
+    -- Clear combat states
+    CombatTarget = nil
+    isShooting = false
+    isIdle = true
+    isBuying = false
+    isBuyingGun = false
+    isKnockMode = false
+    isGrabMode = false
+    isStompMode = false
+    isLoopMode = false
+    isVoidSpam = false
+    IsTeleporting = false
+    isSavingOwner = false
+    isUndergroundAttack = false
+
+    -- Clear auto-buy states
+    AutoBuy.isBuying = false
+    AutoBuy.isEquipping = false
+
+    -- Disconnect all connections safely
+    if grabbingConnection then
+        pcall(function() grabbingConnection:Disconnect() end)
+        grabbingConnection = nil
+    end
+
+    if FadeConnection then
+        pcall(function() FadeConnection:Disconnect() end)
+        FadeConnection = nil
+    end
+
+    if Stand.FollowConnection then
+        pcall(function() Stand.FollowConnection:Disconnect() end)
+        Stand.FollowConnection = nil
+    end
+
+    if Stand.TargetConnection then
+        pcall(function() Stand.TargetConnection:Disconnect() end)
+        Stand.TargetConnection = nil
+    end
+
+    Stand.IsActive = false
+    Stand.IsTargeting = false
+
+    -- Reset velocities
+    pcall(function()
+        local Character = LocalPlayer.Character
+        if Character then
+            local hrp = Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Velocity = Vector3.zero
+                hrp.RotVelocity = Vector3.zero
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+    end)
+
+    -- Reload and unequip
+    reloadTool()
+    UnequipTools()
+    handleUnSpectate()
+    
+    -- UPDATED: Send to Fade/Void instead of returning to owner
+    task.wait(0.1)
+    Stand:Fade()
+
+    print("Fix: Complete - Sent to Void (Idle)")
+end
+
+-- ==================== PROTECTION COMMANDS ====================
+
+-- Handle p! command - Add player to protection
+local function handleProtectCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+    local found = false
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            getgenv().sentryprotected[player.Name] = true
+            print("[Protection] " .. player.Name .. " added to protection list")
+            found = true
+            break
+        end
+    end
+
+    if not found then
+        print("[Protection] Player not found: " .. targetQuery)
+    end
+end
+
+-- Handle unp! command - Remove player from protection
+local function handleUnprotectCommand(targetQuery)
+    targetQuery = targetQuery:lower()
+    local found = false
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if name:find(targetQuery, 1, true) or displayName:find(targetQuery, 1, true) then
+            getgenv().sentryprotected[player.Name] = nil
+            print("[Protection] " .. player.Name .. " removed from protection list")
+            found = true
+            break
+        end
+    end
+
+    if not found then
+        print("[Protection] Player not found: " .. targetQuery)
+    end
+end
+
+-- ==================== CHAT LISTENER SYSTEM ====================
+
+-- Setup chat listener for current owner (Dynamic ownership)
+function Stand:SetupOwnerChatListener(player)
+    if not player then
+        return
+    end
+
+    -- Clear existing connection for this specific player if any
+    if OwnerChatConnections[player.UserId] then
+        OwnerChatConnections[player.UserId]:Disconnect()
+    end
+
+    print("Stand: Listening to commands from " .. player.Name)
+
+    local connection = player.Chatted:Connect(function(message)
+        pcall(function()
+            local msg = message:lower()
+
+            -- !!! CRITICAL FIX: DO NOT EXECUTE COMMANDS WHILE BUYING !!!
+            if AutoBuy.isBuying or isBuying or isBuyingGun then
+                return
+            end
+
+            -- Stand commands
+            if msg == "vanta!" or msg == "va!" then
+                -- ADDED: Chat message when called
+                pcall(function()
+                     local text = "I have been called!"
+                     if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                         local channel = TextChatService.TextChannels.RBXGeneral
+                         if channel then channel:SendAsync(text) end
+                     else
+                         ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(text, "All")
+                     end
+                end)
+                Stand:Call()
+            elseif msg == "f!" or msg == "vanish!" then
+                Stand:Fade()
+            elseif msg == "untarget!" then
+                Stand:Untarget()
+            elseif msg:match("^target!%s+(.+)$") then
+                local targetQuery = msg:match("^target!%s+(.+)$")
+                local target = Stand:FindTargetPlayer(targetQuery)
+                if target then
+                    Stand:Target(target)
+                else
+                    print("Stand: Target not found")
+                end
+
+            -- Follow Request (fr!)
+            elseif msg:match("^fr!%s+(.+)$") then
+                 local targetQuery = msg:match("^fr!%s+(.+)$")
+                 local target = Stand:FindTargetPlayer(targetQuery)
+                 if target then
+                     print("Stand: Redirecting follow to " .. target.Name)
+                     Stand.FollowTarget = target
+
+                     -- Force reset follow loop to ensure immediate snap
+                     if Stand.FollowConnection then
+                         pcall(function() Stand.FollowConnection:Disconnect() end)
+                         Stand.FollowConnection = nil
+                     end
+                     Stand.IsActive = false
+
+                     Stand:Call()
+                 else
+                     print("Stand: User for fr! not found")
+                 end
+
+            -- Unfollow Request (unfr!)
+            elseif msg == "unfr!" then
+                 print("Stand: Resetting follow to owner")
+                 if not Stand.OwnerPlayer then Stand:FindOwner() end
+                 Stand.FollowTarget = nil
+                 if Stand.FollowConnection then
+                     pcall(function() Stand.FollowConnection:Disconnect() end)
+                     Stand.FollowConnection = nil
+                 end
+                 Stand.IsActive = false
+                 Stand:Call()
+
+            -- Give Stand (g!)
+            elseif msg:match("^g!%s+(.+)$") then
+                 local targetQuery = msg:match("^g!%s+(.+)$")
+                 local target = Stand:FindTargetPlayer(targetQuery)
+                 if target then
+                     print("Stand: Transferring ownership to " .. target.Name)
+                     -- Disconnect current owner listener (unless it's the original owner who stays for r!)
+                     if OwnerChatConnections[player.UserId] and player.Name ~= ORIGINAL_OWNER_NAME then
+                         OwnerChatConnections[player.UserId]:Disconnect()
+                         OwnerChatConnections[player.UserId] = nil
+                     end
+
+                     Stand.OwnerPlayer = target
+                     Stand.FollowTarget = target
+
+                     if Stand.FollowConnection then
+                         pcall(function() Stand.FollowConnection:Disconnect() end)
+                         Stand.FollowConnection = nil
+                     end
+                     Stand.IsActive = false
+
+                     Stand:SetupOwnerChatListener(target)
+                     Stand:Call()
+                 else
+                     print("Stand: User for g! not found")
+                 end
+
+            -- Chat Message (t!)
+            elseif msg:match("^t!%s+(.+)$") then
+                 local chatMsg = message:sub(4) -- get raw casing
+                 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                     local channel = TextChatService.TextChannels.RBXGeneral
+                     if channel then
+                         channel:SendAsync(chatMsg)
+                     end
+                 else
+                     -- Fallback to old chat
+                     ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chatMsg, "All")
+                 end
+
+            -- Teleport Command (tp!)
+            elseif msg:match("^tp!%s+([^%s]+)%s*(.*)$") then
+                local arg1, arg2 = msg:match("^tp!%s+([^%s]+)%s*(.*)$")
+                handleTpCommand(arg1, arg2)
+
+            -- Spectate Commands
+            elseif msg:match("^v!%s+(.+)$") then
+                local targetQuery = msg:match("^v!%s+(.+)$")
+                local target = Stand:FindTargetPlayer(targetQuery)
+                if target then
+                    handleSpectate(target)
+                end
+            elseif msg == "unv!" then
+                handleUnSpectate()
+
+            -- Underground Attack Commands
+            elseif msg:match("^a!%s+(.+)$") then
+                local targetQuery = msg:match("^a!%s+(.+)$")
+                local target = Stand:FindTargetPlayer(targetQuery)
+                if target then
+                    handleUndergroundAttack(target)
+                else
+                    print("[Underground] Target not found")
+                end
+            elseif msg:match("^una!%s+(.+)$") or msg == "una!" then
+                print("[Underground] Stopping attack")
+                isUndergroundAttack = false
+                Stand:Fade()
+
+            -- Combat commands (RENAMED)
+            elseif msg:match("^k!%s+([^%s]+)$") then
+                local targetQuery = msg:match("^k!%s+([^%s]+)$")
+                handleGKnockCommand(targetQuery)
+            elseif msg:match("^b!%s+([^%s]+)$") then
+                local targetQuery = msg:match("^b!%s+([^%s]+)$")
+                handleGBringCommand(targetQuery)
+            elseif msg:match("^s!%s+([^%s]+)$") or msg:match("^stomp!%s+([^%s]+)$") then
+                local targetQuery = msg:match("^s!%s+([^%s]+)$") or msg:match("^stomp!%s+([^%s]+)$")
+                handleStompCommand(targetQuery)
+            elseif msg:match("^l!%s+([^%s]+)$") or msg:match("^loop!%s+([^%s]+)$") then
+                local targetQuery = msg:match("^l!%s+([^%s]+)$") or msg:match("^loop!%s+([^%s]+)$")
+                handleLoopCommand(targetQuery)
+
+            -- Protection commands
+            elseif msg:match("^p!%s+(.+)$") then
+                local targetQuery = msg:match("^p!%s+(.+)$")
+                handleProtectCommand(targetQuery)
+            elseif msg:match("^unp!%s+(.+)$") then
+                local targetQuery = msg:match("^unp!%s+(.+)$")
+                handleUnprotectCommand(targetQuery)
+
+            -- AutoSave commands
+            elseif msg == "as! on" then
+                handleAutoSave(true)
+            elseif msg == "as! off" then
+                handleAutoSave(false)
+
+            -- Void Spam commands
+            elseif msg == "vs! on" then
+                handleVoidSpam(true)
+            elseif msg == "vs! off" then
+                handleVoidSpam(false)
+            elseif msg == "vd!" then
+                handleVoidDrop()
+            elseif msg == "fix!" then
+                handleFixCommand()
+            elseif msg == "close!" then
+                print("Close: Shutting down script and killing player...")
+
+                -- Stop all loops immediately
+                ScriptRunning = false
+
+                -- Clear all states
+                CombatTarget = nil
+                isShooting = false
+                isIdle = false
+                isBuying = false
+                isBuyingGun = false
+                isKnockMode = false
+                isGrabMode = false
+                isStompMode = false
+                isLoopMode = false
+                isVoidSpam = false
+                IsTeleporting = false
+                isSavingOwner = false
+                isUndergroundAttack = false
+                AutoBuy.isBuying = false
+                AutoBuy.isEquipping = false
+
+                -- Disconnect all connections
+                if grabbingConnection then
+                    pcall(function() grabbingConnection:Disconnect() end)
+                    grabbingConnection = nil
+                end
+                if FadeConnection then
+                    pcall(function() FadeConnection:Disconnect() end)
+                    FadeConnection = nil
+                end
+                if Stand.FollowConnection then
+                    pcall(function() Stand.FollowConnection:Disconnect() end)
+                    Stand.FollowConnection = nil
+                end
+                if Stand.TargetConnection then
+                    pcall(function() Stand.TargetConnection:Disconnect() end)
+                    Stand.TargetConnection = nil
+                end
+
+                -- Disconnect all chat listeners
+                for userId, conn in pairs(OwnerChatConnections) do
+                    pcall(function() conn:Disconnect() end)
+                end
+                OwnerChatConnections = {}
+
+                Stand.IsActive = false
+                Stand.IsTargeting = false
+                
+                handleUnSpectate()
+
+                -- Re-enable void death
+                pcall(function()
+                    workspace.FallenPartsDestroyHeight = -500
+                end)
+
+                -- Kill local player
+                pcall(function()
+                    local Character = LocalPlayer.Character
+                    if Character then
+                        local Humanoid = Character:FindFirstChild("Humanoid")
+                        if Humanoid then
+                            Humanoid.Health = 0
+                        end
+                    end
+                end)
+
+                print("Close: All loops terminated, connections disconnected, player killed")
+                print("Close: Script fully shutdown")
+            end
+        end)
+    end)
+
+    OwnerChatConnections[player.UserId] = connection
+end
+
+-- Monitor Original Owner for r! command (Permanent Override)
+function Stand:MonitorOriginalOwner()
+    local function hookOriginalOwner(player)
+        if player.Name == ORIGINAL_OWNER_NAME then
+            print("Stand: Original Owner Monitor Hooked on " .. player.Name)
+            player.Chatted:Connect(function(msg)
+                if msg:lower() == "r!" then
+                    print("Stand: Force Return initiated by Original Owner")
+
+                    -- Disconnect current owner if it's not the original
+                    if Stand.OwnerPlayer and Stand.OwnerPlayer.Name ~= ORIGINAL_OWNER_NAME then
+                        if OwnerChatConnections[Stand.OwnerPlayer.UserId] then
+                            OwnerChatConnections[Stand.OwnerPlayer.UserId]:Disconnect()
+                            OwnerChatConnections[Stand.OwnerPlayer.UserId] = nil
+                        end
+                    end
+
+                    Stand.OwnerPlayer = player
+                    Stand.FollowTarget = nil -- Reset to nil (default to owner)
+
+                    -- Force snap logic
+                    if Stand.FollowConnection then
+                         pcall(function() Stand.FollowConnection:Disconnect() end)
+                         Stand.FollowConnection = nil
+                    end
+                    Stand.IsActive = false
+
+                    Stand:SetupOwnerChatListener(player)
+                    Stand:Call()
+                end
+            end)
+        end
+    end
+
+    -- Check existing
+    for _, p in ipairs(Players:GetPlayers()) do
+        hookOriginalOwner(p)
+    end
+
+    -- Check future joins
+    Players.PlayerAdded:Connect(hookOriginalOwner)
+end
+
+-- ==================== INITIALIZATION ====================
+
+-- Main initialization sequence
+function Stand:Init()
+    Stand.OwnerPlayer = Stand:FindOwner()
+
+    -- Initialize FollowTarget as Owner initially
+    Stand.FollowTarget = nil
+
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
+    end
+
+    print("Stand: Initialized")
+
+    -- Setup standard listener
+    if Stand.OwnerPlayer then
+        Stand:SetupOwnerChatListener(Stand.OwnerPlayer)
+        print("Stand: Owner listener set for " .. Stand.OwnerPlayer.Name)
+    else
+        print("Stand: WARNING - Owner not found: " .. OwnerUsername)
+    end
+
+    -- Setup permanent original owner watcher for r! command
+    Stand:MonitorOriginalOwner()
+    
+    -- Start default fade (idle mode)
+    Stand:Fade()
+end
+
+-- Run Initialization
+Stand:Init()
+
+-- Print status
+print("====================================")
+print("Stand Script Loaded! (VANTA V0.2 + FF FIX)")
+print("====================================")
+print("Features:")
+print("  - Protection Fixed: p! now executes STOMP (s!) on attacker and resumes.")
+print("  - AutoSave Fixed: as! now grabs owner reliably on first attempt.")
+print("  - AutoBuy Safety: No commands work while buying weapons.")
+print("  - AutoBuy Optimization: Uses Void Spam to buy safely.")
+print("  - Improved KO Detection (Triple Check)")
+print("  - TP! Upgraded: Can TP to Places OR Users. Waits for passenger exit.")
+print("  - NEW: Spectate (v!), Underground Attack (a!)")
+print("  - NEW: Loading Screen (Vanta V0.2)")
+print("  - FIXED: Reload in Void only triggers after Stomp and only if ammo <= 1")
+print("  - FIXED: ForceField Check (Will not strafe/shoot protected players)")
+print("  - FIXED: s! from Void (Correctly teleports to target)")
+print("  - ABORTS IF OWNER NOT IN SERVER")
+print("====================================")
+print("Stand Commands:")
+print("  vanta!, va! - Follow owner (Say 'I have been called!')")
+print("  f!, vanish! - Random teleport")
+print("  target! <name> - Orbit player")
+print("  untarget! - Stop orbiting")
+print("  fr! <name> - Follow another user (redirect)")
+print("  unfr! - Return to following owner (Relocate)")
+print("  g! <name> - Give stand control to another user")
+print("  r! - Force return stand control to Original Owner")
+print("  t! <msg> - Stand speaks in chat")
+print("  tp! <loc/user> [target] - Kidnap/TP user. Defaults to Owner if target blank.")
+print("  v! <name> - Spectate Target")
+print("  unv! - Stop Spectating")
+print("  close! - Shutdown script")
+print("====================================")
+print("Combat Commands:")
+print("  k! <name> - Knock target ONCE (then Fade)")
+print("  b! <name> - Grab & bring target")
+print("  s! <name> or stomp! <name> - Stomp target once")
+print("  l! <name> or loop! <name> - Loop stomp target repeatedly")
+print("  a! <name> - Attack from Underground (Anti-Gun)")
+print("  una! - Stop Underground Attack")
+print("  fix! - Clear all states & Go to Void")
+print("====================================")
+print("Protection Commands:")
+print("  p! <name> - Add player to protection list (Will STOMP attacker)")
+print("  unp! <name> - Remove player from protection list")
+print("  as! on - Enable AutoSave (Rescue KO'd owner FAST)")
+print("  as! off - Disable AutoSave")
+print("====================================")
